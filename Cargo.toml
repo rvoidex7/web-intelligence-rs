@@ -8,3 +8,7 @@ license = "MIT"
 [dependencies]
 which = "6.0.0"
 dirs = "5.0.0"
+thiserror = "1.0"
+tracing = "0.1"
+tempfile = "3.10"
+regex = "1.10"

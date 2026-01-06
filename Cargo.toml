@@ -12,3 +12,6 @@ thiserror = "1.0"
 tracing = "0.1"
 tempfile = "3.10"
 regex = "1.10"
+
+[dev-dependencies]
+tracing-subscriber = "0.3.22"

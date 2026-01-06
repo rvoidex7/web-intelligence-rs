@@ -1,4 +1,4 @@
-use web_intelligence::{BrowserLauncherBuilder, WebIntelError};
+use web_intelligence::{BrowserLauncherBuilder, WebIntelError, AIExecutionStrategy};
 use std::thread;
 use std::time::Duration;
 
@@ -12,9 +12,14 @@ fn main() -> Result<(), WebIntelError> {
     // We use ephemeral mode for this example so it doesn't leave data behind
     let mut handle = BrowserLauncherBuilder::new()
         .ephemeral(true)
-        .headless(true)
+        .headless(false) // Changed to false to see the app mode window (if we weren't in a headless environment)
         .with_ai_flags(true)
         .viewport(1280, 720)
+        // New features:
+        .app_mode(true)
+        .start_url("https://google.com") // In a real app, this would be your local frontend URL
+        .with_ai_strategy(AIExecutionStrategy::Hybrid)
+        .openai_api_key("sk-proj-...") // Placeholder key
         .launch()?;
 
     println!("Browser launched successfully!");

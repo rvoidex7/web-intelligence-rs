@@ -13,6 +13,23 @@ use which::which;
 mod error;
 pub use error::WebIntelError;
 
+/// Strategies for AI Execution
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AIExecutionStrategy {
+    /// Forces usage of the built-in Window AI. Fails if unsupported.
+    LocalOnly,
+    /// Skips local checks, always uses cloud API key.
+    CloudOnly,
+    /// Tries Local first; if hardware/browser is insufficient, falls back to Cloud.
+    Hybrid,
+}
+
+impl Default for AIExecutionStrategy {
+    fn default() -> Self {
+        Self::LocalOnly
+    }
+}
+
 /// Represents the viewport size for the browser window.
 #[derive(Debug, Clone, Copy)]
 pub struct Viewport {
@@ -31,6 +48,11 @@ pub struct BrowserLauncherBuilder {
     ephemeral: bool,
     with_ai_flags: bool,
     extra_args: Vec<String>,
+    app_mode: bool,
+    start_url: Option<String>,
+    strategy: AIExecutionStrategy,
+    openai_api_key: Option<String>,
+    anthropic_api_key: Option<String>,
 }
 
 impl Default for BrowserLauncherBuilder {
@@ -44,6 +66,11 @@ impl Default for BrowserLauncherBuilder {
             ephemeral: false,
             with_ai_flags: true,
             extra_args: Vec::new(),
+            app_mode: false,
+            start_url: None,
+            strategy: AIExecutionStrategy::default(),
+            openai_api_key: None,
+            anthropic_api_key: None,
         }
     }
 }
@@ -104,6 +131,37 @@ impl BrowserLauncherBuilder {
         self
     }
 
+    /// Enable application mode.
+    /// If true, launches the browser with --app=<URL> (frameless window).
+    pub fn app_mode(mut self, enabled: bool) -> Self {
+        self.app_mode = enabled;
+        self
+    }
+
+    /// Set the starting URL.
+    pub fn start_url(mut self, url: impl Into<String>) -> Self {
+        self.start_url = Some(url.into());
+        self
+    }
+
+    /// Set the AI execution strategy.
+    pub fn with_ai_strategy(mut self, strategy: AIExecutionStrategy) -> Self {
+        self.strategy = strategy;
+        self
+    }
+
+    /// Set the OpenAI API key.
+    pub fn openai_api_key(mut self, key: impl Into<String>) -> Self {
+        self.openai_api_key = Some(key.into());
+        self
+    }
+
+    /// Set the Anthropic API key.
+    pub fn anthropic_api_key(mut self, key: impl Into<String>) -> Self {
+        self.anthropic_api_key = Some(key.into());
+        self
+    }
+
     /// Launches the browser with the configured settings.
     pub fn launch(self) -> Result<BrowserHandle, WebIntelError> {
         let browser_path = self.find_browser_executable()?;
@@ -158,9 +216,33 @@ impl BrowserLauncherBuilder {
             cmd.arg("--allow-insecure-localhost");
         }
 
+        // Application Mode Logic
+        if let Some(url) = &self.start_url {
+            if self.app_mode {
+                cmd.arg(format!("--app={}", url));
+            } else {
+                cmd.arg(url);
+            }
+        }
+
         for arg in self.extra_args {
             cmd.arg(arg);
         }
+
+        // Inject configuration as Environment Variables
+        if let Some(key) = &self.openai_api_key {
+            cmd.env("OPENAI_API_KEY", key);
+        }
+        if let Some(key) = &self.anthropic_api_key {
+            cmd.env("ANTHROPIC_API_KEY", key);
+        }
+
+        let strategy_str = match self.strategy {
+            AIExecutionStrategy::LocalOnly => "local",
+            AIExecutionStrategy::CloudOnly => "cloud",
+            AIExecutionStrategy::Hybrid => "hybrid",
+        };
+        cmd.env("WEB_INTEL_STRATEGY", strategy_str);
 
         // Capture stderr to find the DevTools WebSocket URL
         cmd.stderr(Stdio::piped());

@@ -66,6 +66,32 @@ async function runAI() {
 }
 ```
 
+### WebMCP Tool Registration
+
+The frontend SDK supports the proposed **WebMCP** standard out of the box. You can easily register and unregister functions (tools) for the browser's built-in AI agent to discover and invoke:
+
+```typescript
+// Register a tool
+ai.registerTool({
+  name: "searchFlights",
+  description: "Searches for a flight between origin and destination.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      origin: { type: "string" },
+      destination: { type: "string" },
+    }
+  },
+  execute: async (args) => {
+    console.log(`Searching flights from ${args.origin} to ${args.destination}...`);
+    return { content: [{ type: "text", text: "Flight search complete" }] };
+  }
+});
+
+// Unregister a tool when no longer needed
+ai.unregisterTool("searchFlights");
+```
+
 ## Related Resources
 
 - [Chrome Built-in AI Documentation](https://developer.chrome.com/docs/ai/built-in)

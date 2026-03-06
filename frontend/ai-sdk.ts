@@ -20,9 +20,6 @@ export interface AILanguageModel {
     countPromptTokens(text: string): Promise<number>;
 
     // WebMCP Methods
-    registerTool?(tool: AITool): void;
-    unregisterTool?(toolName: string): void;
-
     maxTokens: number;
     tokensLeft: number;
     topK: number;
@@ -79,6 +76,13 @@ declare global {
         ai?: {
             languageModel?: AILanguageModelFactory;
         } & Partial<WindowAILegacy>;
+    }
+
+    interface Navigator {
+        modelContext?: {
+            registerTool?(tool: AITool): void;
+            unregisterTool?(toolName: string): void;
+        }
     }
 }
 
@@ -156,18 +160,18 @@ export class ChromeNanoProvider implements ILLMProvider {
     }
 
     registerTool(tool: AITool): void {
-        if (this.model && 'registerTool' in this.model && typeof this.model.registerTool === 'function') {
-            this.model.registerTool(tool);
+        if (window.navigator?.modelContext?.registerTool) {
+            window.navigator.modelContext.registerTool(tool);
         } else {
-            console.warn("registerTool is not supported by the current local model.");
+            console.warn("window.navigator.modelContext.registerTool is not supported by the current browser.");
         }
     }
 
     unregisterTool(toolName: string): void {
-        if (this.model && 'unregisterTool' in this.model && typeof this.model.unregisterTool === 'function') {
-            this.model.unregisterTool(toolName);
+        if (window.navigator?.modelContext?.unregisterTool) {
+            window.navigator.modelContext.unregisterTool(toolName);
         } else {
-            console.warn("unregisterTool is not supported by the current local model.");
+            console.warn("window.navigator.modelContext.unregisterTool is not supported by the current browser.");
         }
     }
 }

@@ -2,12 +2,26 @@
 // Supports both legacy (text session) and new (language model) APIs
 
 // --- New API Spec (Prompt API) ---
+// --- WebMCP Tool Spec ---
+export interface AITool {
+    name: string;
+    description?: string;
+    // Defining flexible schemas depending on specific implementions.
+    parameters?: any;
+    execute?: (args: any) => Promise<any> | any;
+}
+
 export interface AILanguageModel {
     prompt(text: string): Promise<string>;
     promptStreaming(text: string): ReadableStream<string>;
     destroy(): void;
     clone(): Promise<AILanguageModel>;
     countPromptTokens(text: string): Promise<number>;
+
+    // WebMCP Methods
+    registerTool?(tool: AITool): void;
+    unregisterTool?(toolName: string): void;
+
     maxTokens: number;
     tokensLeft: number;
     topK: number;
@@ -78,6 +92,8 @@ export interface ILLMProvider {
     // I will use AsyncGenerator or similar.
     stream(prompt: string): AsyncGenerator<string, void, unknown>;
     destroy(): void;
+    registerTool?(tool: AITool): void;
+    unregisterTool?(toolName: string): void;
 }
 
 /**
@@ -135,6 +151,22 @@ export class ChromeNanoProvider implements ILLMProvider {
         if (this.model) {
             this.model.destroy();
             this.model = null;
+        }
+    }
+
+    registerTool(tool: AITool): void {
+        if (this.model && 'registerTool' in this.model && typeof this.model.registerTool === 'function') {
+            this.model.registerTool(tool);
+        } else {
+            console.warn("registerTool is not supported by the current local model.");
+        }
+    }
+
+    unregisterTool(toolName: string): void {
+        if (this.model && 'unregisterTool' in this.model && typeof this.model.unregisterTool === 'function') {
+            this.model.unregisterTool(toolName);
+        } else {
+            console.warn("unregisterTool is not supported by the current local model.");
         }
     }
 }
@@ -238,6 +270,14 @@ export class OpenAIProvider implements ILLMProvider {
 
     destroy(): void {
         // Nothing to clean up
+    }
+
+    registerTool(tool: AITool): void {
+        console.warn("registerTool is not yet implemented for OpenAIProvider.");
+    }
+
+    unregisterTool(toolName: string): void {
+        console.warn("unregisterTool is not yet implemented for OpenAIProvider.");
     }
 }
 
@@ -360,6 +400,28 @@ export class AIClient {
         if (this.provider) {
             this.provider.destroy();
             this.provider = null;
+        }
+    }
+
+    registerTool(tool: AITool): void {
+        if (!this.provider) {
+            throw new Error("AI Client not initialized. Call init() first.");
+        }
+        if (this.provider.registerTool) {
+            this.provider.registerTool(tool);
+        } else {
+            console.warn("registerTool is not supported by the current provider.");
+        }
+    }
+
+    unregisterTool(toolName: string): void {
+        if (!this.provider) {
+            throw new Error("AI Client not initialized. Call init() first.");
+        }
+        if (this.provider.unregisterTool) {
+            this.provider.unregisterTool(toolName);
+        } else {
+            console.warn("unregisterTool is not supported by the current provider.");
         }
     }
 }

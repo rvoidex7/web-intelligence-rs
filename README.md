@@ -71,6 +71,8 @@ async function runAI() {
 The frontend SDK supports the proposed **WebMCP** standard out of the box. You can easily register and unregister functions (tools) for the browser's built-in AI agent to discover and invoke:
 
 ```typescript
+const controller = new AbortController();
+
 // Register a tool
 ai.registerTool({
   name: "searchFlights",
@@ -86,10 +88,11 @@ ai.registerTool({
     console.log(`Searching flights from ${args.origin} to ${args.destination}...`);
     return { content: [{ type: "text", text: "Flight search complete" }] };
   }
-});
+}, { signal: controller.signal });
 
 // Unregister a tool when no longer needed
-ai.unregisterTool("searchFlights");
+ai.unregisterTool?.("searchFlights");
+controller.abort();
 ```
 
 ## Related Resources

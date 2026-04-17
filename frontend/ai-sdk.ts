@@ -91,10 +91,6 @@ declare global {
 export interface ILLMProvider {
     initialize(options?: AILanguageModelCreateOptions): Promise<void>;
     generate(prompt: string): Promise<string>;
-    // stream(prompt: string): AsyncIterable<string>; // Keeping it simple for now as requested by user deliverable "generate, stream" - wait, interface says "generate, stream".
-    // Since implementing ReadableStream handling in TS manually without proper types can be verbose, I'll stick to promise-based stream or async iterator.
-    // The prompt says "Abstract Provider: Create an interface ILLMProvider (generate, stream)."
-    // I will use AsyncGenerator or similar.
     stream(prompt: string): AsyncGenerator<string, void, unknown>;
     destroy(): void;
     registerTool?(tool: AITool, options?: { signal?: AbortSignal }): void;
@@ -285,9 +281,6 @@ export class OpenAIProvider implements ILLMProvider {
         console.warn("unregisterTool is not yet implemented for OpenAIProvider.");
     }
 }
-
-// Stub for Anthropic
-// export class AnthropicProvider implements ILLMProvider { ... }
 
 export type AIExecutionStrategy = 'local' | 'cloud' | 'hybrid';
 

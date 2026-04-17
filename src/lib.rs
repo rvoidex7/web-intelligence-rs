@@ -317,55 +317,64 @@ impl BrowserLauncherBuilder {
             return Err(WebIntelError::BrowserNotFound);
         }
 
-        let mut candidates = Vec::new();
-
         if cfg!(target_os = "windows") {
-             // Standard PATH binaries
-            candidates.extend(vec!["chrome.exe".to_string(), "msedge.exe".to_string(), "chromium.exe".to_string()]);
-            
+            // Standard PATH binaries
+            for bin in ["chrome.exe", "msedge.exe", "chromium.exe"] {
+                if let Ok(p) = which(bin) {
+                    return Ok(p);
+                }
+            }
+
             // Common Windows Installation Paths
             let program_files = std::env::var("ProgramFiles").unwrap_or_else(|_| r"C:\Program Files".to_string());
             let program_files_x86 = std::env::var("ProgramFiles(x86)").unwrap_or_else(|_| r"C:\Program Files (x86)".to_string());
             let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| r"C:\Users\Default\AppData\Local".to_string());
 
-            candidates.push(format!(r"{}\Google\Chrome SxS\Application\chrome.exe", local_app_data)); // Canary
-            candidates.push(format!(r"{}\Google\Chrome\Application\chrome.exe", program_files));
-            candidates.push(format!(r"{}\Google\Chrome\Application\chrome.exe", program_files_x86));
-            candidates.push(format!(r"{}\Microsoft\Edge\Application\msedge.exe", program_files));
-            candidates.push(format!(r"{}\Microsoft\Edge\Application\msedge.exe", program_files_x86));
+            let candidates = [
+                (local_app_data.as_str(), r"Google\Chrome SxS\Application\chrome.exe"),
+                (program_files.as_str(), r"Google\Chrome\Application\chrome.exe"),
+                (program_files_x86.as_str(), r"Google\Chrome\Application\chrome.exe"),
+                (program_files.as_str(), r"Microsoft\Edge\Application\msedge.exe"),
+                (program_files_x86.as_str(), r"Microsoft\Edge\Application\msedge.exe"),
+            ];
 
-        } else if cfg!(target_os = "macos") {
-            candidates.extend(vec![
-                "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary".to_string(),
-                "/Applications/Google Chrome Dev.app/Contents/MacOS/Google Chrome Dev".to_string(),
-                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome".to_string(),
-                "/Applications/Chromium.app/Contents/MacOS/Chromium".to_string(),
-                "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge".to_string()
-            ]);
-        } else {
-             // Linux
-            candidates.extend(vec![
-                "google-chrome-unstable".to_string(),
-                "google-chrome-beta".to_string(),
-                "google-chrome".to_string(),
-                "google-chrome-stable".to_string(),
-                "chromium".to_string(),
-                "chromium-browser".to_string()
-            ]);
-        };
-
-        for candidate in candidates {
-            let path = PathBuf::from(&candidate);
-            if path.is_absolute() {
+            for (dir, relative_path) in candidates {
+                let mut path = PathBuf::from(dir);
+                path.push(relative_path);
                 if path.exists() {
                     return Ok(path);
                 }
-            } else {
-                if let Ok(p) = which(&candidate) {
+            }
+        } else if cfg!(target_os = "macos") {
+            let candidates = [
+                "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
+                "/Applications/Google Chrome Dev.app/Contents/MacOS/Google Chrome Dev",
+                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                "/Applications/Chromium.app/Contents/MacOS/Chromium",
+                "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+            ];
+            for candidate in candidates {
+                let path = PathBuf::from(candidate);
+                if path.exists() {
+                    return Ok(path);
+                }
+            }
+        } else {
+            // Linux
+            let candidates = [
+                "google-chrome-unstable",
+                "google-chrome-beta",
+                "google-chrome",
+                "google-chrome-stable",
+                "chromium",
+                "chromium-browser",
+            ];
+            for candidate in candidates {
+                if let Ok(p) = which(candidate) {
                     return Ok(p);
                 }
             }
-        }
+        };
 
         Err(WebIntelError::BrowserNotFound)
     }

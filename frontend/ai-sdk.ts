@@ -3,12 +3,17 @@
 
 // --- New API Spec (Prompt API) ---
 // --- WebMCP Tool Spec ---
+export interface ToolAnnotations {
+    readOnlyHint?: boolean;
+    untrustedContentHint?: boolean;
+}
+
 export interface AITool {
     name: string;
     description?: string;
     // Defining flexible schemas depending on specific implementions.
     inputSchema?: any; // To align with the actual spec for WebMCP
-    annotations?: any; // To align with the actual spec for WebMCP
+    annotations?: ToolAnnotations; // To align with the actual spec for WebMCP
     execute?: (args: any) => Promise<any> | any;
 }
 

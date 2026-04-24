@@ -10,7 +10,7 @@ fn main() -> Result<(), WebIntelError> {
 
     // Create a new browser launcher
     // We use ephemeral mode for this example so it doesn't leave data behind
-    let mut handle = BrowserLauncherBuilder::new()
+    let handle = BrowserLauncherBuilder::new()
         .ephemeral(true)
         .headless(false) // Changed to false to see the app mode window (if we weren't in a headless environment)
         .with_ai_flags(true)

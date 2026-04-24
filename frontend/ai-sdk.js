@@ -4,9 +4,7 @@
  * Implementation for the built-in Chrome Nano model.
  */
 export class ChromeNanoProvider {
-    constructor() {
-        this.model = null;
-    }
+    model = null;
     async initialize(options) {
         if (!window.ai) {
             throw new Error("Window AI API not supported.");
@@ -77,6 +75,8 @@ export class ChromeNanoProvider {
  * Implementation for OpenAI Cloud Provider.
  */
 export class OpenAIProvider {
+    apiKey;
+    modelName;
     constructor(apiKey, modelName = "gpt-3.5-turbo") {
         this.apiKey = apiKey;
         this.modelName = modelName;
@@ -171,8 +171,9 @@ export class OpenAIProvider {
     }
 }
 export class AIClient {
+    provider = null;
+    config;
     constructor(config) {
-        this.provider = null;
         this.config = config || { strategy: 'local' };
     }
     /**

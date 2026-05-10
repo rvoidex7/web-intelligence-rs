@@ -99,4 +99,3 @@ controller.abort();
 
 - [Chrome Built-in AI Documentation](https://developer.chrome.com/docs/ai/built-in)
 - [Explainer: Prompt API for Gemini Nano](https://github.com/explainers-by-googlers/prompt-api)
-- [Web Machine Learning](https://webmachinelearning.github.io/)

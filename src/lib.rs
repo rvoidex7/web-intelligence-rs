@@ -13,6 +13,9 @@ use which::which;
 mod error;
 pub use error::WebIntelError;
 
+#[cfg(feature = "tauri")]
+pub mod tauri_plugin;
+
 /// Strategies for AI Execution
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AIExecutionStrategy {

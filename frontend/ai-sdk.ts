@@ -83,6 +83,13 @@ declare global {
         } & Partial<WindowAILegacy>;
     }
 
+    interface Document {
+        modelContext?: {
+            registerTool?(tool: AITool, options?: { signal?: AbortSignal }): void;
+            unregisterTool?(toolName: string): void;
+        }
+    }
+
     interface Navigator {
         modelContext?: {
             registerTool?(tool: AITool, options?: { signal?: AbortSignal }): void;
@@ -161,18 +168,20 @@ export class ChromeNanoProvider implements ILLMProvider {
     }
 
     registerTool(tool: AITool, options?: { signal?: AbortSignal }): void {
-        if (window.navigator?.modelContext?.registerTool) {
-            window.navigator.modelContext.registerTool(tool, options);
+        const modelContext = document.modelContext || window.navigator?.modelContext;
+        if (modelContext?.registerTool) {
+            modelContext.registerTool(tool, options);
         } else {
-            console.warn("window.navigator.modelContext.registerTool is not supported by the current browser.");
+            console.warn("modelContext.registerTool is not supported by the current browser.");
         }
     }
 
     unregisterTool(toolName: string): void {
-        if (window.navigator?.modelContext?.unregisterTool) {
-            window.navigator.modelContext.unregisterTool(toolName);
+        const modelContext = document.modelContext || window.navigator?.modelContext;
+        if (modelContext?.unregisterTool) {
+            modelContext.unregisterTool(toolName);
         } else {
-            console.warn("window.navigator.modelContext.unregisterTool is not supported by the current browser.");
+            console.warn("modelContext.unregisterTool is not supported by the current browser.");
         }
     }
 }

@@ -17,6 +17,8 @@ export interface AITool {
     execute?: (args: any) => Promise<any> | any;
 }
 
+export type AILanguageModelSamplingMode = 'most-predictable' | 'predictable' | 'balanced' | 'creative' | 'most-creative';
+
 export interface AILanguageModel {
     prompt(text: string): Promise<string>;
     promptStreaming(text: string): ReadableStream<string>;
@@ -27,19 +29,14 @@ export interface AILanguageModel {
     // WebMCP Methods
     maxTokens: number;
     tokensLeft: number;
-    topK: number;
-    temperature: number;
 }
 
 export interface AILanguageModelCreateOptions {
-    topK?: number;
-    temperature?: number;
     systemPrompt?: string;
+    samplingMode?: AILanguageModelSamplingMode;
 }
 
 export interface AIAvailabilityOptions {
-    topK?: number;
-    temperature?: number;
 }
 
 export type AICapabilityAvailability = 'readily' | 'after-download' | 'no';
@@ -51,9 +48,6 @@ export interface AILanguageModelFactory {
 
 export interface AILanguageModelCapabilities {
     available: AICapabilityAvailability;
-    defaultTopK: number;
-    maxTopK: number;
-    defaultTemperature: number;
 }
 
 

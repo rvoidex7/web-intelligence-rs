@@ -79,15 +79,15 @@ declare global {
 
     interface Document {
         modelContext?: {
-            registerTool?(tool: AITool, options?: { signal?: AbortSignal }): void;
-            unregisterTool?(toolName: string): void;
+            registerTool?(tool: AITool, options?: { signal?: AbortSignal }): Promise<void>;
+            unregisterTool?(toolName: string): Promise<void>;
         }
     }
 
     interface Navigator {
         modelContext?: {
-            registerTool?(tool: AITool, options?: { signal?: AbortSignal }): void;
-            unregisterTool?(toolName: string): void;
+            registerTool?(tool: AITool, options?: { signal?: AbortSignal }): Promise<void>;
+            unregisterTool?(toolName: string): Promise<void>;
         }
     }
 }
@@ -99,8 +99,8 @@ export interface ILLMProvider {
     generate(prompt: string): Promise<string>;
     stream(prompt: string): AsyncGenerator<string, void, unknown>;
     destroy(): void;
-    registerTool?(tool: AITool, options?: { signal?: AbortSignal }): void;
-    unregisterTool?(toolName: string): void;
+    registerTool?(tool: AITool, options?: { signal?: AbortSignal }): Promise<void>;
+    unregisterTool?(toolName: string): Promise<void>;
 }
 
 /**
@@ -161,19 +161,27 @@ export class ChromeNanoProvider implements ILLMProvider {
         }
     }
 
-    registerTool(tool: AITool, options?: { signal?: AbortSignal }): void {
+    async registerTool(tool: AITool, options?: { signal?: AbortSignal }): Promise<void> {
         const modelContext = document.modelContext || window.navigator?.modelContext;
         if (modelContext?.registerTool) {
-            modelContext.registerTool(tool, options);
+            try {
+                await modelContext.registerTool(tool, options);
+            } catch (e) {
+                console.error('Tool registration failed:', e);
+            }
         } else {
             console.warn("modelContext.registerTool is not supported by the current browser.");
         }
     }
 
-    unregisterTool(toolName: string): void {
+    async unregisterTool(toolName: string): Promise<void> {
         const modelContext = document.modelContext || window.navigator?.modelContext;
         if (modelContext?.unregisterTool) {
-            modelContext.unregisterTool(toolName);
+            try {
+                await modelContext.unregisterTool(toolName);
+            } catch (e) {
+                console.error('Tool unregistration failed:', e);
+            }
         } else {
             console.warn("modelContext.unregisterTool is not supported by the current browser.");
         }
@@ -281,12 +289,20 @@ export class OpenAIProvider implements ILLMProvider {
         // Nothing to clean up
     }
 
-    registerTool(tool: AITool, options?: { signal?: AbortSignal }): void {
-        console.warn("registerTool is not yet implemented for OpenAIProvider.");
+    /**
+     * @todo Implement WebMCP tool registration for OpenAI Cloud Provider
+     * @throws {Error} always, as this is currently unimplemented
+     */
+    async registerTool(tool: AITool, options?: { signal?: AbortSignal }): Promise<void> {
+        throw new Error("registerTool is not yet implemented for OpenAIProvider.");
     }
 
-    unregisterTool(toolName: string): void {
-        console.warn("unregisterTool is not yet implemented for OpenAIProvider.");
+    /**
+     * @todo Implement WebMCP tool unregistration for OpenAI Cloud Provider
+     * @throws {Error} always, as this is currently unimplemented
+     */
+    async unregisterTool(toolName: string): Promise<void> {
+        throw new Error("unregisterTool is not yet implemented for OpenAIProvider.");
     }
 }
 
@@ -409,23 +425,23 @@ export class AIClient {
         }
     }
 
-    registerTool(tool: AITool, options?: { signal?: AbortSignal }): void {
+    async registerTool(tool: AITool, options?: { signal?: AbortSignal }): Promise<void> {
         if (!this.provider) {
             throw new Error("AI Client not initialized. Call init() first.");
         }
         if (this.provider.registerTool) {
-            this.provider.registerTool(tool, options);
+            await this.provider.registerTool(tool, options);
         } else {
             console.warn("registerTool is not supported by the current provider.");
         }
     }
 
-    unregisterTool(toolName: string): void {
+    async unregisterTool(toolName: string): Promise<void> {
         if (!this.provider) {
             throw new Error("AI Client not initialized. Call init() first.");
         }
         if (this.provider.unregisterTool) {
-            this.provider.unregisterTool(toolName);
+            await this.provider.unregisterTool(toolName);
         } else {
             console.warn("unregisterTool is not supported by the current provider.");
         }

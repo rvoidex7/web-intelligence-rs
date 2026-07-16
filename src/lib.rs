@@ -215,7 +215,7 @@ impl BrowserLauncherBuilder {
 
         if self.with_ai_flags {
             // Flags for enabling experimental AI features
-            cmd.arg("--enable-features=OptimizationGuideModelDownloading,OptimizationGuideOnDeviceModel,PromptAPIForGeminiNano");
+            cmd.arg("--enable-features=OptimizationGuideModelDownloading,OptimizationGuideOnDeviceModel,PromptAPIForGeminiNano,SemanticEmbedderAPI");
             cmd.arg("--allow-insecure-localhost");
         }
 

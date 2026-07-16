@@ -68,6 +68,22 @@ export interface WindowAILegacy {
     createTextSession(options?: AITextSessionOptions): Promise<AIModelLegacy>;
 }
 
+// --- Embedding API Spec ---
+export interface EmbedderResult {
+    embeddings: Array<{
+        values: Float32Array;
+    }>;
+}
+
+export interface SemanticEmbedder {
+    embed(text: string | string[]): Promise<EmbedderResult>;
+    destroy(): void;
+}
+
+export interface SemanticEmbedderFactory {
+    availability(): Promise<AICapabilityAvailability | "unavailable">;
+    create(): Promise<SemanticEmbedder>;
+}
 
 // --- Global Declaration ---
 declare global {
@@ -75,6 +91,7 @@ declare global {
         ai?: {
             languageModel?: AILanguageModelFactory;
         } & Partial<WindowAILegacy>;
+        SemanticEmbedder?: SemanticEmbedderFactory;
     }
 
     interface Document {
@@ -101,6 +118,7 @@ export interface ILLMProvider {
     destroy(): void;
     registerTool?(tool: AITool, options?: { signal?: AbortSignal }): Promise<void>;
     unregisterTool?(toolName: string): Promise<void>;
+    embed?(text: string | string[]): Promise<EmbedderResult>;
 }
 
 /**
@@ -184,6 +202,26 @@ export class ChromeNanoProvider implements ILLMProvider {
             }
         } else {
             console.warn("modelContext.unregisterTool is not supported by the current browser.");
+        }
+    }
+
+    async embed(text: string | string[]): Promise<EmbedderResult> {
+        const factory = window.SemanticEmbedder || (window.ai as any)?.semanticEmbedder;
+        if (!factory) {
+            throw new Error("SemanticEmbedder API is not available in this browser.");
+        }
+
+        const availability = await factory.availability();
+        if (availability === "no" || availability === "unavailable") {
+            throw new Error(`SemanticEmbedder API is reported as ${availability}.`);
+        }
+
+        const embedder = await factory.create();
+        try {
+            return await embedder.embed(text);
+        } finally {
+            // Proactively release resources as recommended by the explainer
+            embedder.destroy();
         }
     }
 }
@@ -303,6 +341,34 @@ export class OpenAIProvider implements ILLMProvider {
      */
     async unregisterTool(toolName: string): Promise<void> {
         throw new Error("unregisterTool is not yet implemented for OpenAIProvider.");
+    }
+
+    async embed(text: string | string[]): Promise<EmbedderResult> {
+        // Fallback to OpenAI's embedding API
+        const response = await fetch("https://api.openai.com/v1/embeddings", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${this.apiKey}`
+            },
+            body: JSON.stringify({
+                model: "text-embedding-3-small", // default sensible model
+                input: text
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`OpenAI API Error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        // Map OpenAI's response format to the browser's EmbedderResult format
+        const embeddings = data.data.map((item: any) => ({
+            values: new Float32Array(item.embedding)
+        }));
+
+        return { embeddings };
     }
 }
 
@@ -444,6 +510,17 @@ export class AIClient {
             await this.provider.unregisterTool(toolName);
         } else {
             console.warn("unregisterTool is not supported by the current provider.");
+        }
+    }
+
+    async embed(text: string | string[]): Promise<EmbedderResult> {
+        if (!this.provider) {
+            throw new Error("AI Client not initialized. Call init() first.");
+        }
+        if (this.provider.embed) {
+            return await this.provider.embed(text);
+        } else {
+            throw new Error("embed is not supported by the current provider.");
         }
     }
 }

@@ -82,6 +82,24 @@ export class ChromeNanoProvider {
             console.warn("modelContext.unregisterTool is not supported by the current browser.");
         }
     }
+    async embed(text) {
+        const factory = window.SemanticEmbedder || window.ai?.semanticEmbedder;
+        if (!factory) {
+            throw new Error("SemanticEmbedder API is not available in this browser.");
+        }
+        const availability = await factory.availability();
+        if (availability === "no" || availability === "unavailable") {
+            throw new Error(`SemanticEmbedder API is reported as ${availability}.`);
+        }
+        const embedder = await factory.create();
+        try {
+            return await embedder.embed(text);
+        }
+        finally {
+            // Proactively release resources as recommended by the explainer
+            embedder.destroy();
+        }
+    }
 }
 /**
  * Implementation for OpenAI Cloud Provider.
@@ -188,6 +206,29 @@ export class OpenAIProvider {
      */
     async unregisterTool(toolName) {
         throw new Error("unregisterTool is not yet implemented for OpenAIProvider.");
+    }
+    async embed(text) {
+        // Fallback to OpenAI's embedding API
+        const response = await fetch("https://api.openai.com/v1/embeddings", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${this.apiKey}`
+            },
+            body: JSON.stringify({
+                model: "text-embedding-3-small", // default sensible model
+                input: text
+            })
+        });
+        if (!response.ok) {
+            throw new Error(`OpenAI API Error: ${response.statusText}`);
+        }
+        const data = await response.json();
+        // Map OpenAI's response format to the browser's EmbedderResult format
+        const embeddings = data.data.map((item) => ({
+            values: new Float32Array(item.embedding)
+        }));
+        return { embeddings };
     }
 }
 export class AIClient {
@@ -317,6 +358,17 @@ export class AIClient {
         }
         else {
             console.warn("unregisterTool is not supported by the current provider.");
+        }
+    }
+    async embed(text) {
+        if (!this.provider) {
+            throw new Error("AI Client not initialized. Call init() first.");
+        }
+        if (this.provider.embed) {
+            return await this.provider.embed(text);
+        }
+        else {
+            throw new Error("embed is not supported by the current provider.");
         }
     }
 }

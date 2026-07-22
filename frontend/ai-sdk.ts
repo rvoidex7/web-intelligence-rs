@@ -102,6 +102,10 @@ declare global {
     }
 
     interface Navigator {
+        /**
+         * @deprecated As of Chrome 150, navigator.modelContext is deprecated and removed in Chrome 152.
+         * Use document.modelContext instead.
+         */
         modelContext?: {
             registerTool?(tool: AITool, options?: { signal?: AbortSignal }): Promise<void>;
             unregisterTool?(toolName: string): Promise<void>;

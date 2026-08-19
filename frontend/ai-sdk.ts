@@ -14,7 +14,7 @@ export interface AITool {
     // Defining flexible schemas depending on specific implementions.
     inputSchema?: any; // To align with the actual spec for WebMCP
     annotations?: ToolAnnotations; // To align with the actual spec for WebMCP
-    execute?: (args: any) => Promise<any> | any;
+    execute?: (args: any, options: { signal: AbortSignal }) => Promise<any> | any;
 }
 
 export type AILanguageModelSamplingMode = 'most-predictable' | 'predictable' | 'balanced' | 'creative' | 'most-creative';

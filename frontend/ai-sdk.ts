@@ -126,9 +126,11 @@ export interface ILLMProvider {
 }
 
 /**
- * Implementation for the built-in Chrome Nano model.
+ * Implementation for the built-in Chrome AI model (Gemma 4 / Gemini Nano).
+ * Requires Chrome Canary v153+ for Gemma 4 support.
+ * Advanced function calling for Prompt API is expected in future updates.
  */
-export class ChromeNanoProvider implements ILLMProvider {
+export class ChromeBuiltInProvider implements ILLMProvider {
     private model: AILanguageModel | AIModelLegacy | null = null;
 
     async initialize(options?: AILanguageModelCreateOptions): Promise<void> {
@@ -458,7 +460,7 @@ export class AIClient {
              throw new Error("Local AI API missing.");
         }
 
-        const provider = new ChromeNanoProvider();
+        const provider = new ChromeBuiltInProvider();
         await provider.initialize(this.config.modelOptions);
         this.provider = provider;
     }

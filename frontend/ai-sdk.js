@@ -1,9 +1,11 @@
 // Type definitions for the Chrome Built-in AI API
 // Supports both legacy (text session) and new (language model) APIs
 /**
- * Implementation for the built-in Chrome Nano model.
+ * Implementation for the built-in Chrome AI model (Gemma 4 / Gemini Nano).
+ * Requires Chrome Canary v153+ for Gemma 4 support.
+ * Advanced function calling for Prompt API is expected in future updates.
  */
-export class ChromeNanoProvider {
+export class ChromeBuiltInProvider {
     model = null;
     async initialize(options) {
         if (!window.ai) {
@@ -306,7 +308,7 @@ export class AIClient {
             // If window.ai is completely missing
             throw new Error("Local AI API missing.");
         }
-        const provider = new ChromeNanoProvider();
+        const provider = new ChromeBuiltInProvider();
         await provider.initialize(this.config.modelOptions);
         this.provider = provider;
     }

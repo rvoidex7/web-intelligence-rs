@@ -6,6 +6,7 @@
 export interface ToolAnnotations {
     readOnlyHint?: boolean;
     untrustedContentHint?: boolean;
+    consequentialHint?: boolean;
 }
 
 export interface AITool {

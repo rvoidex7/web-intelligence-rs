@@ -69,6 +69,28 @@ export interface WindowAILegacy {
     createTextSession(options?: AITextSessionOptions): Promise<AIModelLegacy>;
 }
 
+// --- Summarizer API Spec ---
+export interface AISummarizer {
+    summarize(text: string): Promise<string>;
+    summarizeStreaming(text: string): ReadableStream<string>;
+    destroy(): void;
+}
+
+export type AISummarizerType = 'key-points' | 'tl;dr' | 'teaser' | 'headline';
+export type AISummarizerFormat = 'markdown' | 'plain-text';
+export type AISummarizerLength = 'short' | 'medium' | 'long';
+
+export interface AISummarizerCreateOptions {
+    type?: AISummarizerType;
+    format?: AISummarizerFormat;
+    length?: AISummarizerLength;
+}
+
+export interface AISummarizerFactory {
+    availability(): Promise<AICapabilityAvailability | "unavailable">;
+    create(options?: AISummarizerCreateOptions): Promise<AISummarizer>;
+}
+
 // --- Embedding API Spec ---
 export interface EmbedderResult {
     embeddings: Array<{
@@ -91,6 +113,7 @@ declare global {
     interface Window {
         ai?: {
             languageModel?: AILanguageModelFactory;
+            summarizer?: AISummarizerFactory;
         } & Partial<WindowAILegacy>;
         SemanticEmbedder?: SemanticEmbedderFactory;
     }
@@ -124,6 +147,7 @@ export interface ILLMProvider {
     registerTool?(tool: AITool, options?: { signal?: AbortSignal }): Promise<void>;
     unregisterTool?(toolName: string): Promise<void>;
     embed?(text: string | string[]): Promise<EmbedderResult>;
+    summarize?(text: string, options?: AISummarizerCreateOptions): Promise<string>;
 }
 
 /**
@@ -229,6 +253,24 @@ export class ChromeBuiltInProvider implements ILLMProvider {
         } finally {
             // Proactively release resources as recommended by the explainer
             embedder.destroy();
+        }
+    }
+
+    async summarize(text: string, options?: AISummarizerCreateOptions): Promise<string> {
+        if (!window.ai?.summarizer) {
+            throw new Error("Summarizer API is not available in this browser.");
+        }
+
+        const availability = await window.ai.summarizer.availability();
+        if (availability === "no" || availability === "unavailable") {
+            throw new Error(`Summarizer API is reported as ${availability}.`);
+        }
+
+        const summarizer = await window.ai.summarizer.create(options);
+        try {
+            return await summarizer.summarize(text);
+        } finally {
+            summarizer.destroy();
         }
     }
 }
@@ -376,6 +418,37 @@ export class OpenAIProvider implements ILLMProvider {
         }));
 
         return { embeddings };
+    }
+
+    /**
+     * Fallback summarization using OpenAI's chat completion.
+     */
+    async summarize(text: string, options?: AISummarizerCreateOptions): Promise<string> {
+        const type = options?.type || 'key-points';
+        const format = options?.format || 'markdown';
+        const length = options?.length || 'medium';
+
+        const prompt = `Summarize the following text. Type: ${type}, Format: ${format}, Length: ${length}.\n\nText:\n${text}`;
+
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${this.apiKey}`
+            },
+            body: JSON.stringify({
+                model: this.modelName,
+                messages: [{ role: "user", content: prompt }],
+                stream: false
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`OpenAI API Error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0]?.message?.content || "";
     }
 }
 
@@ -528,6 +601,17 @@ export class AIClient {
             return await this.provider.embed(text);
         } else {
             throw new Error("embed is not supported by the current provider.");
+        }
+    }
+
+    async summarize(text: string, options?: AISummarizerCreateOptions): Promise<string> {
+        if (!this.provider) {
+            throw new Error("AI Client not initialized. Call init() first.");
+        }
+        if (this.provider.summarize) {
+            return await this.provider.summarize(text, options);
+        } else {
+            throw new Error("summarize is not supported by the current provider.");
         }
     }
 }

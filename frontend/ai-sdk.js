@@ -102,6 +102,22 @@ export class ChromeBuiltInProvider {
             embedder.destroy();
         }
     }
+    async summarize(text, options) {
+        if (!window.ai?.summarizer) {
+            throw new Error("Summarizer API is not available in this browser.");
+        }
+        const availability = await window.ai.summarizer.availability();
+        if (availability === "no" || availability === "unavailable") {
+            throw new Error(`Summarizer API is reported as ${availability}.`);
+        }
+        const summarizer = await window.ai.summarizer.create(options);
+        try {
+            return await summarizer.summarize(text);
+        }
+        finally {
+            summarizer.destroy();
+        }
+    }
 }
 /**
  * Implementation for OpenAI Cloud Provider.
@@ -231,6 +247,32 @@ export class OpenAIProvider {
             values: new Float32Array(item.embedding)
         }));
         return { embeddings };
+    }
+    /**
+     * Fallback summarization using OpenAI's chat completion.
+     */
+    async summarize(text, options) {
+        const type = options?.type || 'key-points';
+        const format = options?.format || 'markdown';
+        const length = options?.length || 'medium';
+        const prompt = `Summarize the following text. Type: ${type}, Format: ${format}, Length: ${length}.\n\nText:\n${text}`;
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${this.apiKey}`
+            },
+            body: JSON.stringify({
+                model: this.modelName,
+                messages: [{ role: "user", content: prompt }],
+                stream: false
+            })
+        });
+        if (!response.ok) {
+            throw new Error(`OpenAI API Error: ${response.statusText}`);
+        }
+        const data = await response.json();
+        return data.choices[0]?.message?.content || "";
     }
 }
 export class AIClient {
@@ -371,6 +413,17 @@ export class AIClient {
         }
         else {
             throw new Error("embed is not supported by the current provider.");
+        }
+    }
+    async summarize(text, options) {
+        if (!this.provider) {
+            throw new Error("AI Client not initialized. Call init() first.");
+        }
+        if (this.provider.summarize) {
+            return await this.provider.summarize(text, options);
+        }
+        else {
+            throw new Error("summarize is not supported by the current provider.");
         }
     }
 }
